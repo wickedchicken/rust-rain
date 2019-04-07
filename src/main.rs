@@ -1,3 +1,5 @@
+use rust_rain;
+
 fn main() {
-    println!("Hello, world!");
+    rust_rain::print_termsize();
 }
