@@ -1,0 +1,11 @@
+[package]
+name = "rust-rain"
+version = "0.1.0"
+authors = ["Mike Stipicevic <stipredirect@gmail.com>"]
+edition = "2018"
+
+[[bin]]
+name = "rain"
+path = "src/main.rs"
+
+[dependencies]
