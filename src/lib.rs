@@ -1,4 +1,6 @@
 extern crate rand;
+#[macro_use]
+extern crate structopt;
 extern crate termion;
 
 use rand::Rng;
@@ -7,8 +9,25 @@ use std::convert::TryInto;
 use std::io;
 use std::io::prelude::*;
 use std::{thread, time};
+use termion::color;
 use termion::screen::AlternateScreen;
 use termion::terminal_size;
+
+#[derive(StructOpt)]
+#[structopt(
+    name = "rain",
+    about = "Display rain on the terminal",
+    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+)]
+pub struct Opt {
+    #[structopt(
+        default_value = "blue",
+        short = "c",
+        long = "color",
+        help = "color to draw the rain (black, blue, cyan, green, magenta, red, white, yellow)"
+    )]
+    color: String,
+}
 
 #[derive(Debug)]
 struct Coordinate {
@@ -104,7 +123,7 @@ impl Raindrop {
     }
 }
 
-pub fn draw_rain() {
+pub fn draw_rain(opts: &Opt) {
     let (x_max, y_max) = terminal_size().unwrap();
     let mut rng = rand::thread_rng();
     let mut screen = AlternateScreen::from(io::stdout());
@@ -125,6 +144,19 @@ pub fn draw_rain() {
         let mut new_drops: Vec<Raindrop> = Vec::new();
 
         write!(screen, "{}", termion::clear::All).unwrap();
+
+        match opts.color.as_str() {
+            "black" => write!(screen, "{}", color::Fg(color::Black)).unwrap(),
+            "blue" => write!(screen, "{}", color::Fg(color::Blue)).unwrap(),
+            "cyan" => write!(screen, "{}", color::Fg(color::Cyan)).unwrap(),
+            "green" => write!(screen, "{}", color::Fg(color::Green)).unwrap(),
+            "magenta" => write!(screen, "{}", color::Fg(color::Magenta)).unwrap(),
+            "red" => write!(screen, "{}", color::Fg(color::Red)).unwrap(),
+            "white" => write!(screen, "{}", color::Fg(color::White)).unwrap(),
+            "yellow" => write!(screen, "{}", color::Fg(color::Yellow)).unwrap(),
+            _ => panic!("could not parse color"),
+        }
+
         for mut drop in drops {
             drop.draw(&mut screen);
             drop.increment();
@@ -133,6 +165,7 @@ pub fn draw_rain() {
                 new_drops.push(drop);
             }
         }
+        write!(screen, "{}", color::Fg(color::Reset)).unwrap();
 
         drops = new_drops;
 

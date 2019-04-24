@@ -1,5 +1,7 @@
 use rust_rain;
+use structopt::StructOpt;
 
 fn main() {
-    rust_rain::draw_rain();
+    let opts = rust_rain::Opt::from_args();
+    rust_rain::draw_rain(&opts);
 }
