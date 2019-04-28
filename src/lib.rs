@@ -3,15 +3,28 @@ extern crate rand;
 extern crate structopt;
 extern crate termion;
 
+use rand::distributions::{Distribution, Poisson};
 use rand::Rng;
 use std::cmp;
 use std::convert::TryInto;
 use std::io;
 use std::io::prelude::*;
+use std::num::ParseFloatError;
+use std::str::FromStr;
 use std::{thread, time};
 use termion::color;
 use termion::screen::AlternateScreen;
 use termion::terminal_size;
+
+fn parse_fps(src: &str) -> Result<f64, ParseFloatError> {
+    let res = f64::from_str(src)?;
+
+    if res > 0.0 {
+        Ok(res)
+    } else {
+        panic!("fps must be greater than zero!")
+    }
+}
 
 #[derive(StructOpt)]
 #[structopt(
@@ -27,6 +40,28 @@ pub struct Opt {
         help = "color to draw the rain (black, blue, cyan, green, magenta, red, white, yellow)"
     )]
     color: String,
+    #[structopt(
+        default_value = "10.0",
+        short = "r",
+        long = "rate",
+        help = "average drops per second to generate"
+    )]
+    rate: f64,
+    #[structopt(
+        default_value = "100",
+        short = "m",
+        long = "max",
+        help = "maximum number of drops to render at one time"
+    )]
+    max: i32,
+    #[structopt(
+        default_value = "10",
+        parse(try_from_str = "parse_fps"),
+        short = "f",
+        long = "fps",
+        help = "rendered frames per second (may be limited by terminal draw speed)"
+    )]
+    fps: f64,
 }
 
 #[derive(Debug)]
@@ -121,6 +156,9 @@ impl Raindrop {
             ],
         ]
     }
+
+    const MAX_X: u16 = 2;
+    const MAX_Y: u16 = 2;
 }
 
 pub fn draw_rain(opts: &Opt) {
@@ -132,14 +170,24 @@ pub fn draw_rain(opts: &Opt) {
 
     let mut drops: Vec<Raindrop> = Vec::new();
 
-    let xbuf = 2;
-    let ybuf = 2;
+    let millis = (((1.0 / opts.fps) * 1000.0) as u64).try_into().unwrap();
+
+    let adjusted_rate = opts.rate * (millis as f64 / 1000.0);
+
+    let poi = Poisson::new(adjusted_rate);
 
     loop {
-        let x = rng.gen_range(0 + xbuf, x_max - (1 + xbuf));
-        let y = rng.gen_range(0 + ybuf, y_max - (1 + ybuf));
+        let number_of_new_drops = poi.sample(&mut rand::thread_rng());
 
-        drops.push(Raindrop::new(x, y));
+        for _ in 0..number_of_new_drops {
+            if drops.len() >= opts.max as usize {
+                break;
+            }
+            let x = rng.gen_range(0 + Raindrop::MAX_X, x_max - (1 + Raindrop::MAX_X));
+            let y = rng.gen_range(0 + Raindrop::MAX_Y, y_max - (1 + Raindrop::MAX_Y));
+
+            drops.push(Raindrop::new(x, y));
+        }
 
         let mut new_drops: Vec<Raindrop> = Vec::new();
 
@@ -170,6 +218,6 @@ pub fn draw_rain(opts: &Opt) {
         drops = new_drops;
 
         screen.flush().unwrap();
-        thread::sleep(time::Duration::from_millis(100));
+        thread::sleep(time::Duration::from_millis(millis));
     }
 }
