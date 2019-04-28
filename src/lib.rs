@@ -1,3 +1,4 @@
+extern crate ctrlc;
 extern crate fps_clock;
 extern crate rand;
 #[macro_use]
@@ -12,6 +13,8 @@ use std::io;
 use std::io::prelude::*;
 use std::num::ParseIntError;
 use std::str::FromStr;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use termion::color;
 use termion::screen::AlternateScreen;
 use termion::terminal_size;
@@ -168,7 +171,7 @@ pub fn draw_rain(opts: &Opt) {
 
     let mut fps = fps_clock::FpsClock::new(opts.fps);
 
-    print!("{}", termion::cursor::Hide);
+    write!(screen, "{}", termion::cursor::Hide).unwrap();
 
     let mut drops: Vec<Raindrop> = Vec::new();
 
@@ -176,7 +179,15 @@ pub fn draw_rain(opts: &Opt) {
 
     let poi = Poisson::new(adjusted_rate);
 
-    loop {
+    let running = Arc::new(AtomicBool::new(true));
+    let r = running.clone();
+
+    ctrlc::set_handler(move || {
+        r.store(false, Ordering::SeqCst);
+    })
+    .expect("Error setting Ctrl-C handler");
+
+    while running.load(Ordering::SeqCst) {
         let number_of_new_drops = poi.sample(&mut rand::thread_rng());
 
         for _ in 0..number_of_new_drops {
@@ -220,4 +231,6 @@ pub fn draw_rain(opts: &Opt) {
         screen.flush().unwrap();
         fps.tick();
     }
+
+    write!(screen, "{}", termion::cursor::Show).unwrap();
 }
