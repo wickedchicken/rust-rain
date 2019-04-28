@@ -1,0 +1,74 @@
+---
+language: rust
+
+dist: xenial
+services: docker
+
+env:
+  global:
+    - CRATE_NAME=rust-rain
+
+cache: cargo
+before_cache:
+  # Travis can't cache files that are not readable by "others"
+  - chmod -R a+r $HOME/.cargo
+
+matrix:
+  include:
+    # Linux
+    - env: TARGET=i686-unknown-linux-gnu
+    - env: TARGET=i686-unknown-linux-musl
+    - env: TARGET=x86_64-unknown-linux-gnu
+    - env: TARGET=x86_64-unknown-linux-musl
+
+    # OSX
+    - env: TARGET=x86_64-apple-darwin
+      os: osx
+
+
+branches:
+  only:
+    # release tags
+    - /^v\d+\.\d+\.\d+.*$/
+    - master
+
+before_install:
+  - set -e
+  - rustup self update
+
+install:
+  - pip install --user yamllint  # xenial yamllint is too old for -s
+  - sh ci/install.sh
+  - source ~/.cargo/env || true
+
+before_script:
+  - rustup component add rustfmt
+  - rustup component add clippy
+
+script:
+  - bash ci/script.sh
+
+after_script: set +e
+
+before_deploy:
+  - sh ci/before_deploy.sh
+
+deploy:
+  api_key:
+    secure: "NeLjdh6URnPqbpNLsI0POO+PNQsdFKOIxInKfPurtY5MtG+ywKGAtnH8HRBEf4Fs3K\
+    H0WeX2U2l7FHmFRd21yXF+UCb575dW8d+BdpAzQQ3vpzn3fOOFRShsORntFbyKNs6oxVyYcb5d7\
+    hv/1UHT+GGOOR8iEvy0kTVeVwGiHAqNQBDdpVJro4e4dYDXc7Bcf8tiP+gNby8UNpIvkeKX5cVr\
+    T/0EOGAZpdqUna3IaTwtwyUCNmCoWD62XpES6wKeCw/ky+zPQnJbcWIL7CT6ptdGZMY74DMwmek\
+    y2pZvb1kRLLkJ4Wzb4Am5TzU2bP5CczXqsnjzVDRJ8MiuuKxQDSX6RtShJOX5/Oq8R3fvVONhIa\
+    3kZbO/yWIANftRdtLB5w1nr6+ijXkvsyVwnuyWv3auENZymHkYsdjRSIuvb0HQgJKxjhDWvirsk\
+    VV2L0I0DukWhf+NqferrRKRk9eF7wFPiks6hl1PJGQ/DAcvN1uWyy8wNsWJkBbyywFUyrZgxSSI\
+    hNwxumGeRewDv0/+Ga/TgRGE3FEvXnO6h9/4wlhHmjr8dtsFoUOaFPDSAAfJzu9bCeYLyHVsfTI\
+    XWD7F+eEs0WS7pKond9SkgitYJ1P4YjpKveUE7Ehd303z5Lr4hzkgOQpifVjdT4iePagW2HASJX\
+    5wffGbWNEWXu2Sm6g="
+  file_glob: true
+  file: $CRATE_NAME-$TRAVIS_TAG-$TARGET.*
+  on:  # yamllint disable-line rule:truthy
+    condition: $TRAVIS_RUST_VERSION = stable
+    tags: true
+  provider: releases
+  skip_cleanup: true
