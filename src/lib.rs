@@ -1,3 +1,4 @@
+extern crate fps_clock;
 extern crate rand;
 #[macro_use]
 extern crate structopt;
@@ -9,17 +10,16 @@ use std::cmp;
 use std::convert::TryInto;
 use std::io;
 use std::io::prelude::*;
-use std::num::ParseFloatError;
+use std::num::ParseIntError;
 use std::str::FromStr;
-use std::{thread, time};
 use termion::color;
 use termion::screen::AlternateScreen;
 use termion::terminal_size;
 
-fn parse_fps(src: &str) -> Result<f64, ParseFloatError> {
-    let res = f64::from_str(src)?;
+fn parse_fps(src: &str) -> Result<u32, ParseIntError> {
+    let res = u32::from_str(src)?;
 
-    if res > 0.0 {
+    if res > 0 {
         Ok(res)
     } else {
         panic!("fps must be greater than zero!")
@@ -61,7 +61,7 @@ pub struct Opt {
         long = "fps",
         help = "rendered frames per second (may be limited by terminal draw speed)"
     )]
-    fps: f64,
+    fps: u32,
 }
 
 #[derive(Debug)]
@@ -166,13 +166,13 @@ pub fn draw_rain(opts: &Opt) {
     let mut rng = rand::thread_rng();
     let mut screen = AlternateScreen::from(io::stdout());
 
+    let mut fps = fps_clock::FpsClock::new(opts.fps);
+
     print!("{}", termion::cursor::Hide);
 
     let mut drops: Vec<Raindrop> = Vec::new();
 
-    let millis = (((1.0 / opts.fps) * 1000.0) as u64).try_into().unwrap();
-
-    let adjusted_rate = opts.rate * (millis as f64 / 1000.0);
+    let adjusted_rate = opts.rate / opts.fps as f64;
 
     let poi = Poisson::new(adjusted_rate);
 
@@ -218,6 +218,6 @@ pub fn draw_rain(opts: &Opt) {
         drops = new_drops;
 
         screen.flush().unwrap();
-        thread::sleep(time::Duration::from_millis(millis));
+        fps.tick();
     }
 }
