@@ -5,6 +5,7 @@ extern crate rand;
 extern crate structopt;
 extern crate termion;
 
+use structopt::clap::arg_enum;
 use rand::distributions::{Distribution, Poisson};
 use rand::Rng;
 use std::cmp;
@@ -29,6 +30,28 @@ fn parse_fps(src: &str) -> Result<u32, ParseIntError> {
     }
 }
 
+arg_enum! {
+    #[derive(Debug)]
+    enum Color {
+        Black,
+        Blue,
+        Cyan,
+        Green,
+        LightBlack,
+        LightBlue,
+        LightCyan,
+        LightGreen,
+        LightMagenta,
+        LightRed,
+        LightWhite,
+        LightYellow,
+        Magenta,
+        Red,
+        White,
+        Yellow,
+    }
+}
+
 #[derive(StructOpt)]
 #[structopt(
     name = "rain",
@@ -37,12 +60,13 @@ fn parse_fps(src: &str) -> Result<u32, ParseIntError> {
 )]
 pub struct Opt {
     #[structopt(
-        default_value = "blue",
+        default_value = "Blue",
         short = "c",
         long = "color",
-        help = "color to draw the rain (black, blue, cyan, green, magenta, red, white, yellow)"
+        help = "ANSI color to draw the rain in",
+        raw(possible_values = "&Color::variants()", case_insensitive = "true"),
     )]
-    color: String,
+    color: Color,
     #[structopt(
         default_value = "10.0",
         short = "r",
@@ -204,16 +228,23 @@ pub fn draw_rain(opts: &Opt) {
 
         write!(screen, "{}", termion::clear::All).unwrap();
 
-        match opts.color.as_str() {
-            "black" => write!(screen, "{}", color::Fg(color::Black)).unwrap(),
-            "blue" => write!(screen, "{}", color::Fg(color::Blue)).unwrap(),
-            "cyan" => write!(screen, "{}", color::Fg(color::Cyan)).unwrap(),
-            "green" => write!(screen, "{}", color::Fg(color::Green)).unwrap(),
-            "magenta" => write!(screen, "{}", color::Fg(color::Magenta)).unwrap(),
-            "red" => write!(screen, "{}", color::Fg(color::Red)).unwrap(),
-            "white" => write!(screen, "{}", color::Fg(color::White)).unwrap(),
-            "yellow" => write!(screen, "{}", color::Fg(color::Yellow)).unwrap(),
-            _ => panic!("could not parse color"),
+        match opts.color {
+            Color::Black => write!(screen, "{}", color::Fg(color::Black)).unwrap(),
+            Color::Blue => write!(screen, "{}", color::Fg(color::Blue)).unwrap(),
+            Color::Cyan => write!(screen, "{}", color::Fg(color::Cyan)).unwrap(),
+            Color::Green => write!(screen, "{}", color::Fg(color::Green)).unwrap(),
+            Color::LightBlack => write!(screen, "{}", color::Fg(color::LightBlack)).unwrap(),
+            Color::LightBlue => write!(screen, "{}", color::Fg(color::LightBlue)).unwrap(),
+            Color::LightCyan => write!(screen, "{}", color::Fg(color::LightCyan)).unwrap(),
+            Color::LightGreen => write!(screen, "{}", color::Fg(color::LightGreen)).unwrap(),
+            Color::LightMagenta => write!(screen, "{}", color::Fg(color::LightMagenta)).unwrap(),
+            Color::LightRed => write!(screen, "{}", color::Fg(color::LightRed)).unwrap(),
+            Color::LightWhite => write!(screen, "{}", color::Fg(color::LightWhite)).unwrap(),
+            Color::LightYellow => write!(screen, "{}", color::Fg(color::LightYellow)).unwrap(),
+            Color::Magenta => write!(screen, "{}", color::Fg(color::Magenta)).unwrap(),
+            Color::Red => write!(screen, "{}", color::Fg(color::Red)).unwrap(),
+            Color::White => write!(screen, "{}", color::Fg(color::White)).unwrap(),
+            Color::Yellow => write!(screen, "{}", color::Fg(color::Yellow)).unwrap(),
         }
 
         for mut drop in drops {
