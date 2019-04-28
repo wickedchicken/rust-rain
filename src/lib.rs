@@ -32,7 +32,7 @@ pub fn draw_rain(opts: &opts::Opt) {
 
     let mut drops: Vec<Raindrop> = Vec::new();
 
-    let adjusted_rate = opts.rate / opts.fps as f64;
+    let adjusted_rate = opts.rate / f64::from(opts.fps);
 
     let poi = Poisson::new(adjusted_rate);
 
@@ -53,8 +53,8 @@ pub fn draw_rain(opts: &opts::Opt) {
             if drops.len() >= opts.max as usize {
                 break;
             }
-            let x = rng.gen_range(0 + Raindrop::MAX_X, x_max - (1 + Raindrop::MAX_X));
-            let y = rng.gen_range(0 + Raindrop::MAX_Y, y_max - (1 + Raindrop::MAX_Y));
+            let x = rng.gen_range(Raindrop::MAX_X, x_max - (1 + Raindrop::MAX_X));
+            let y = rng.gen_range(Raindrop::MAX_Y, y_max - (1 + Raindrop::MAX_Y));
 
             drops.push(Raindrop::new(x, y));
         }

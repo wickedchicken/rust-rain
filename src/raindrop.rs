@@ -44,10 +44,10 @@ impl Raindrop {
 
     pub fn draw(&self, screen: &mut dyn std::io::Write) {
         for drawchar in &Raindrop::states()[self.state] {
-            let newx: u16 = (self.coord.x as i32 + drawchar.coord.x as i32)
+            let newx: u16 = (i32::from(self.coord.x) + i32::from(drawchar.coord.x))
                 .try_into()
                 .unwrap();
-            let newy: u16 = (self.coord.y as i32 + drawchar.coord.y as i32)
+            let newy: u16 = (i32::from(self.coord.y) + i32::from(drawchar.coord.y))
                 .try_into()
                 .unwrap();
             write!(
@@ -65,7 +65,7 @@ impl Raindrop {
     }
 
     pub fn is_done(&self) -> bool {
-        return self.state >= Raindrop::states().len();
+        self.state >= Raindrop::states().len()
     }
 
     fn states() -> Vec<Vec<Drawchar>> {
