@@ -5,190 +5,23 @@ extern crate rand;
 extern crate structopt;
 extern crate termion;
 
-use structopt::clap::arg_enum;
 use rand::distributions::{Distribution, Poisson};
 use rand::Rng;
-use std::cmp;
-use std::convert::TryInto;
 use std::io;
 use std::io::prelude::*;
-use std::num::ParseIntError;
-use std::str::FromStr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use termion::color;
 use termion::screen::AlternateScreen;
 use termion::terminal_size;
 
-fn parse_fps(src: &str) -> Result<u32, ParseIntError> {
-    let res = u32::from_str(src)?;
+pub mod opts;
 
-    if res > 0 {
-        Ok(res)
-    } else {
-        panic!("fps must be greater than zero!")
-    }
-}
+mod raindrop;
 
-arg_enum! {
-    #[derive(Debug)]
-    enum Color {
-        Black,
-        Blue,
-        Cyan,
-        Green,
-        LightBlack,
-        LightBlue,
-        LightCyan,
-        LightGreen,
-        LightMagenta,
-        LightRed,
-        LightWhite,
-        LightYellow,
-        Magenta,
-        Red,
-        White,
-        Yellow,
-    }
-}
+use raindrop::Raindrop;
 
-#[derive(StructOpt)]
-#[structopt(
-    name = "rain",
-    about = "Display rain on the terminal",
-    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
-)]
-pub struct Opt {
-    #[structopt(
-        default_value = "Blue",
-        short = "c",
-        long = "color",
-        help = "ANSI color to draw the rain in",
-        raw(possible_values = "&Color::variants()", case_insensitive = "true"),
-    )]
-    color: Color,
-    #[structopt(
-        default_value = "10.0",
-        short = "r",
-        long = "rate",
-        help = "average drops per second to generate"
-    )]
-    rate: f64,
-    #[structopt(
-        default_value = "100",
-        short = "m",
-        long = "max",
-        help = "maximum number of drops to render at one time"
-    )]
-    max: i32,
-    #[structopt(
-        default_value = "10",
-        parse(try_from_str = "parse_fps"),
-        short = "f",
-        long = "fps",
-        help = "rendered frames per second (may be limited by terminal draw speed)"
-    )]
-    fps: u32,
-}
-
-#[derive(Debug)]
-struct Coordinate {
-    x: u16,
-    y: u16,
-}
-
-#[derive(Debug)]
-struct RelativeCoordinate {
-    x: i8,
-    y: i8,
-}
-
-#[derive(Debug)]
-struct Drawchar {
-    coord: RelativeCoordinate,
-    char: &'static str,
-}
-
-impl Drawchar {
-    fn new(x: i8, y: i8, c: &'static str) -> Drawchar {
-        Drawchar {
-            coord: RelativeCoordinate { x, y },
-            char: c,
-        }
-    }
-}
-
-#[derive(Debug)]
-struct Raindrop {
-    state: usize,
-    coord: Coordinate,
-}
-
-impl Raindrop {
-    fn new(x: u16, y: u16) -> Raindrop {
-        Raindrop {
-            state: 0,
-            coord: Coordinate { x, y },
-        }
-    }
-
-    fn draw(&self, screen: &mut dyn std::io::Write) {
-        for drawchar in &Raindrop::states()[self.state] {
-            let newx: u16 = (self.coord.x as i32 + drawchar.coord.x as i32)
-                .try_into()
-                .unwrap();
-            let newy: u16 = (self.coord.y as i32 + drawchar.coord.y as i32)
-                .try_into()
-                .unwrap();
-            write!(
-                screen,
-                "{}{}",
-                termion::cursor::Goto(newx, newy),
-                drawchar.char
-            )
-            .unwrap();
-        }
-    }
-
-    fn increment(&mut self) {
-        self.state = cmp::min(self.state + 1, Raindrop::states().len());
-    }
-
-    fn is_done(&self) -> bool {
-        return self.state >= Raindrop::states().len();
-    }
-
-    fn states() -> Vec<Vec<Drawchar>> {
-        vec![
-            vec![Drawchar::new(0, 0, ".")],
-            vec![Drawchar::new(0, 0, "o")],
-            vec![Drawchar::new(0, 0, "O")],
-            vec![
-                Drawchar::new(0, -1, "-"),
-                Drawchar::new(-1, 0, "|"),
-                Drawchar::new(0, 0, "."),
-                Drawchar::new(1, 0, "|"),
-                Drawchar::new(0, 1, "-"),
-            ],
-            vec![
-                Drawchar::new(0, -2, "-"),
-                Drawchar::new(-1, -1, "/"),
-                Drawchar::new(1, -1, "\\"),
-                Drawchar::new(-2, 0, "|"),
-                Drawchar::new(0, 0, "O"),
-                Drawchar::new(2, 0, "|"),
-                Drawchar::new(-1, 1, "\\"),
-                Drawchar::new(1, 1, "/"),
-                Drawchar::new(0, 2, "-"),
-            ],
-        ]
-    }
-
-    const MAX_X: u16 = 2;
-    const MAX_Y: u16 = 2;
-}
-
-pub fn draw_rain(opts: &Opt) {
+pub fn draw_rain(opts: &opts::Opt) {
     let (x_max, y_max) = terminal_size().unwrap();
     let mut rng = rand::thread_rng();
     let mut screen = AlternateScreen::from(io::stdout());
@@ -211,6 +44,8 @@ pub fn draw_rain(opts: &Opt) {
     })
     .expect("Error setting Ctrl-C handler");
 
+    let color_str = opts.color.to_color_str();
+
     while running.load(Ordering::SeqCst) {
         let number_of_new_drops = poi.sample(&mut rand::thread_rng());
 
@@ -227,25 +62,7 @@ pub fn draw_rain(opts: &Opt) {
         let mut new_drops: Vec<Raindrop> = Vec::new();
 
         write!(screen, "{}", termion::clear::All).unwrap();
-
-        match opts.color {
-            Color::Black => write!(screen, "{}", color::Fg(color::Black)).unwrap(),
-            Color::Blue => write!(screen, "{}", color::Fg(color::Blue)).unwrap(),
-            Color::Cyan => write!(screen, "{}", color::Fg(color::Cyan)).unwrap(),
-            Color::Green => write!(screen, "{}", color::Fg(color::Green)).unwrap(),
-            Color::LightBlack => write!(screen, "{}", color::Fg(color::LightBlack)).unwrap(),
-            Color::LightBlue => write!(screen, "{}", color::Fg(color::LightBlue)).unwrap(),
-            Color::LightCyan => write!(screen, "{}", color::Fg(color::LightCyan)).unwrap(),
-            Color::LightGreen => write!(screen, "{}", color::Fg(color::LightGreen)).unwrap(),
-            Color::LightMagenta => write!(screen, "{}", color::Fg(color::LightMagenta)).unwrap(),
-            Color::LightRed => write!(screen, "{}", color::Fg(color::LightRed)).unwrap(),
-            Color::LightWhite => write!(screen, "{}", color::Fg(color::LightWhite)).unwrap(),
-            Color::LightYellow => write!(screen, "{}", color::Fg(color::LightYellow)).unwrap(),
-            Color::Magenta => write!(screen, "{}", color::Fg(color::Magenta)).unwrap(),
-            Color::Red => write!(screen, "{}", color::Fg(color::Red)).unwrap(),
-            Color::White => write!(screen, "{}", color::Fg(color::White)).unwrap(),
-            Color::Yellow => write!(screen, "{}", color::Fg(color::Yellow)).unwrap(),
-        }
+        write!(screen, "{}", color_str).unwrap();
 
         for mut drop in drops {
             drop.draw(&mut screen);
