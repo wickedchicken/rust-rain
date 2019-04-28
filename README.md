@@ -6,6 +6,10 @@ A console screensaver inspired by
 [`rain`](https://github.com/NetBSD/src/blob/trunk/games/rain/rain.c) was authored by
 Eric P. Scott in 1980 (!).
 
+<p align="center">
+    <img width="357" height="254" src="rain.gif" alt="demonstration gif">
+</p>
+
 ## Installing
 
 You can `git clone` this repository and run `cargo build` followed by `cargo run`.
