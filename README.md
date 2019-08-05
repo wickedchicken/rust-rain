@@ -1,5 +1,6 @@
 # rust-rain
 [![Build Status](https://travis-ci.org/wickedchicken/rust-rain.svg?branch=master)](https://travis-ci.org/wickedchicken/rust-rain)
+[![Dependabot Status](https://api.dependabot.com/badges/status?host=github&repo=wickedchicken/rust-rain)](https://dependabot.com)
 
 A console screensaver inspired by
 [BSD rain](https://github.com/NetBSD/src/blob/trunk/games/rain/rain.c). The original
