@@ -1,12 +1,13 @@
 extern crate ctrlc;
 extern crate fps_clock;
 extern crate rand;
+extern crate rand_distr;
 #[macro_use]
 extern crate structopt;
 extern crate termion;
 
-use rand::distributions::{Distribution, Poisson};
 use rand::Rng;
+use rand_distr::{Distribution, Poisson};
 use std::io;
 use std::io::prelude::*;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -34,7 +35,7 @@ pub fn draw_rain(opts: &opts::Opt) {
 
     let adjusted_rate = opts.rate / f64::from(opts.fps);
 
-    let poi = Poisson::new(adjusted_rate);
+    let poi = Poisson::new(adjusted_rate).unwrap();
 
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
