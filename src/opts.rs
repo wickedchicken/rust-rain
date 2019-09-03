@@ -1,4 +1,4 @@
-use structopt::clap::arg_enum;
+use structopt::clap::{arg_enum, AppSettings};
 use termion::color;
 
 use std::num::ParseIntError;
@@ -63,7 +63,7 @@ impl Color {
 #[structopt(
     name = "rain",
     about = "Display rain on the terminal",
-    raw(setting = "structopt::clap::AppSettings::ColoredHelp")
+    global_settings(&[AppSettings::ColoredHelp]),
 )]
 pub struct Opt {
     #[structopt(
@@ -71,7 +71,8 @@ pub struct Opt {
         short = "c",
         long = "color",
         help = "ANSI color to draw the rain in",
-        raw(possible_values = "&Color::variants()", case_insensitive = "true")
+        possible_values = &Color::variants(),
+        case_insensitive = true,
     )]
     pub color: Color,
     #[structopt(
@@ -90,7 +91,7 @@ pub struct Opt {
     pub max: i32,
     #[structopt(
         default_value = "10",
-        parse(try_from_str = "parse_fps"),
+        parse(try_from_str = parse_fps),
         short = "f",
         long = "fps",
         help = "rendered frames per second (may be limited by terminal draw speed)"
