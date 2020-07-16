@@ -1,4 +1,3 @@
-use rust_rain;
 use structopt::StructOpt;
 
 fn main() {
